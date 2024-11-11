@@ -23,7 +23,8 @@ st.session_state.stats = response
 
 # Mapping hotkeys to validator names
 hotkey_to_name = {
-    "5GKH9FPPnWSUoeeTJp19wVtd84XqFW4pyK2ijV2GsFbhTrP1": "Taostats Validator"
+    "5GKH9FPPnWSUoeeTJp19wVtd84XqFW4pyK2ijV2GsFbhTrP1": "Taostats Validator",
+    "5FFApaS75bv5pJHfAp2FVLBj9ZaXuFDjEypsaBNc1wCfe52v": "RoundTable21"
 }
 name_to_hotkey = {v: k for k, v in hotkey_to_name.items()}
 
