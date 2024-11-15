@@ -49,7 +49,7 @@ tier_distribution = {}
 scores = {}
 for uid, data in metadata.items():
     tier = data["tier"]
-    scores[uid] = data.get("elo_rating", data["score"])
+    scores[uid] = data.get("elo_rating", data.get("score", 0))
     tier_distribution[tier] = tier_distribution.get(tier, 0) + 1
 
 # Display the selected validator's title in the left column
