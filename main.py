@@ -109,15 +109,16 @@ else:
 
 # Display the selected tier's score distribution as a bar chart
 uids = [uid for uid, data in metadata.items() if data["tier"] == selected_tier]
-widths = st.columns([1, 3, 1])
+widths = st.columns([1, 5, 1])
 if uids:
     with widths[1]:
 
-        scores_tier = [scores[uid] for uid in uids]
+        sorted_pairs = sorted(zip(uids, [scores[uid] for uid in uids]), key=lambda x: x[1], reverse=True)
+        sorted_uids, scores_tier = zip(*sorted_pairs)
 
         fig = go.Figure(
             data=[
-                go.Bar(x=[str(uid) for uid in uids], y=scores_tier, marker_color=color)
+                go.Bar(x=[str(uid) for uid in sorted_uids], y=scores_tier, marker_color=color)
             ],
         )
         fig.update_layout(
