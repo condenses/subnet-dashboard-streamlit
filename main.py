@@ -112,24 +112,26 @@ uids = [uid for uid, data in metadata.items() if data["tier"] == selected_tier]
 widths = st.columns([1, 5, 1])
 if uids:
     with widths[1]:
-
+        # Sort UIDs and their corresponding scores
         sorted_pairs = sorted(zip(uids, [scores[uid] for uid in uids]), key=lambda x: x[1], reverse=True)
         sorted_uids, scores_tier = zip(*sorted_pairs)
 
+        # Generate the bar chart
         fig = go.Figure(
             data=[
                 go.Bar(x=[str(uid) for uid in sorted_uids], y=scores_tier, marker_color=color)
             ],
         )
+        # Update layout with sorted tick values
         fig.update_layout(
             title=f"Last epoch scores",
             xaxis_title="UID",
             yaxis_title="Score",
-            xaxis=dict(tickmode="array", tickvals=[str(uid) for uid in uids]),
+            xaxis=dict(tickmode="array", tickvals=[str(uid) for uid in sorted_uids]),
             title_font=dict(size=14, family="monospace", color="#333"),
             xaxis_tickangle=-45,
         )
         st.plotly_chart(fig)
-
 else:
     st.write("No scores found for the selected tier.")
+
