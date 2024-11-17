@@ -109,7 +109,7 @@ else:
 
 # Display the selected tier's score distribution as a bar chart
 uids = [uid for uid, data in metadata.items() if data["tier"] == selected_tier]
-widths = st.columns([1, 5, 1])
+widths = st.columns([1, 8, 1])
 if uids:
     with widths[1]:
         # Sort UIDs and their corresponding scores
