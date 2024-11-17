@@ -130,6 +130,7 @@ if uids:
             xaxis=dict(tickmode="array", tickvals=[str(uid) for uid in sorted_uids]),
             title_font=dict(size=14, family="monospace", color="#333"),
             xaxis_tickangle=-45,
+            xaxis_type="category"
         )
         st.plotly_chart(fig)
 else:
