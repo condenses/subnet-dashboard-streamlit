@@ -115,7 +115,7 @@ if uids:
         # Sort UIDs and their corresponding scores
         sorted_pairs = sorted(zip(uids, [scores[uid] for uid in uids]), key=lambda x: x[1], reverse=True)
         sorted_uids, scores_tier = zip(*sorted_pairs)
-
+        print(sorted_uids, scores_tier)
         # Generate the bar chart
         fig = go.Figure(
             data=[
