@@ -124,9 +124,9 @@ if uids:
         )
         # Update layout with sorted tick values
         fig.update_layout(
-            title=f"Last epoch scores",
-            xaxis_title="UID",
-            yaxis_title="Score",
+            title="Elo Ranking,
+            xaxis_title="uid",
+            yaxis_title="elo",
             xaxis=dict(tickmode="array", tickvals=[str(uid) for uid in sorted_uids]),
             title_font=dict(size=14, family="monospace", color="#333"),
             xaxis_tickangle=-45,
