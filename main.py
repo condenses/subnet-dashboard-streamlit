@@ -124,7 +124,7 @@ if uids:
         )
         # Update layout with sorted tick values
         fig.update_layout(
-            title="Elo Ranking,
+            title="Elo Ranking",
             xaxis_title="uid",
             yaxis_title="elo",
             xaxis=dict(tickmode="array", tickvals=[str(uid) for uid in sorted_uids]),
