@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
 import plotly.graph_objects as go
-
+import pandas as pd
 # Set up page configuration with a custom layout and favicon
 st.set_page_config(page_title="Leaderboard - Neural Condense Subnet", layout="wide")
 
@@ -45,6 +45,7 @@ for report in reports["reports"]:
 
 # Extract metadata and calculate tier distribution
 metadata = report["report"]["metadata"]
+
 tier_distribution = {}
 scores = {}
 for uid, data in metadata.items():
@@ -81,6 +82,7 @@ colors = ["#636EFA", "#EF553B", "#00CC96"]
 # Pie chart for tier distribution in the right column
 labels = list(tier_distribution.keys())
 values = list(tier_distribution.values())
+
 with col2:
     fig = go.Figure(
         data=[
@@ -109,17 +111,26 @@ else:
 
 # Display the selected tier's score distribution as a bar chart
 uids = [uid for uid, data in metadata.items() if data["tier"] == selected_tier]
-widths = st.columns([1, 8, 1])
+widths = st.columns([4, 6])
 if uids:
+    with widths[0]:
+        st.markdown("**Metadata Table**")
+        metadata_df = pd.DataFrame(metadata).transpose()
+        # drop tier not in tiers
+        metadata_df = metadata_df[metadata_df["tier"].isin(tiers)]
+        # Add multiselect to choose UIDs from metadata table
+        selected_uids = st.multiselect("Select UIDs to highlight", metadata_df.index)
+        st.dataframe(metadata_df, use_container_width=True)
     with widths[1]:
         # Sort UIDs and their corresponding scores
         sorted_pairs = sorted(zip(uids, [scores[uid] for uid in uids]), key=lambda x: x[1], reverse=True)
         sorted_uids, scores_tier = zip(*sorted_pairs)
         print(sorted_uids, scores_tier)
-        # Generate the bar chart
+        # Generate the bar chart with highlighted bars
+        bar_colors = [color if str(uid) not in selected_uids else '#00FFFF' for uid in sorted_uids]
         fig = go.Figure(
             data=[
-                go.Bar(x=[str(uid) for uid in sorted_uids], y=scores_tier, marker_color=color)
+                go.Bar(x=[str(uid) for uid in sorted_uids], y=scores_tier, marker_color=bar_colors)
             ],
         )
         # Update layout with sorted tick values
@@ -127,12 +138,22 @@ if uids:
             title="Elo Ranking",
             xaxis_title="uid",
             yaxis_title="elo",
-            xaxis=dict(tickmode="array", tickvals=[str(uid) for uid in sorted_uids]),
+            xaxis=dict(
+                tickmode="array",
+                # Show only every 5th uid to reduce density
+                tickvals=[str(uid) for i, uid in enumerate(sorted_uids) if i % 5 == 0],
+                ticktext=[str(uid) for i, uid in enumerate(sorted_uids) if i % 5 == 0]
+            ),
             title_font=dict(size=14, family="monospace", color="#333"),
             xaxis_tickangle=-45,
             xaxis_type="category"
         )
         st.plotly_chart(fig)
+        
+        # Display table of selected UIDs
+        if selected_uids:
+            st.markdown("**Selected UIDs Details**")
+            selected_data = metadata_df.loc[selected_uids]
+            st.dataframe(selected_data, use_container_width=True)
 else:
     st.write("No scores found for the selected tier.")
-
