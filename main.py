@@ -2,6 +2,9 @@ import streamlit as st
 import requests
 import plotly.graph_objects as go
 import pandas as pd
+import plotly.express as px
+from utils import display_win_loss_matrix, display_na_rates
+
 # Set up page configuration with a custom layout and favicon
 st.set_page_config(page_title="Leaderboard - Neural Condense Subnet", layout="wide")
 
@@ -25,7 +28,7 @@ st.session_state.stats = response
 hotkey_to_name = {
     "5GKH9FPPnWSUoeeTJp19wVtd84XqFW4pyK2ijV2GsFbhTrP1": "Taostats Validator",
     "5FFApaS75bv5pJHfAp2FVLBj9ZaXuFDjEypsaBNc1wCfe52v": "RoundTable21",
-    "5F2CsUDVbRbVMXTh9fAzF9GacjVX7UapvRxidrxe7z8BYckQ": "Rizzo"
+    "5F2CsUDVbRbVMXTh9fAzF9GacjVX7UapvRxidrxe7z8BYckQ": "Rizzo",
 }
 name_to_hotkey = {v: k for k, v in hotkey_to_name.items()}
 
@@ -124,14 +127,21 @@ if uids:
         st.dataframe(metadata_df, use_container_width=True)
     with widths[1]:
         # Sort UIDs and their corresponding scores
-        sorted_pairs = sorted(zip(uids, [scores[uid] for uid in uids]), key=lambda x: x[1], reverse=True)
+        sorted_pairs = sorted(
+            zip(uids, [scores[uid] for uid in uids]), key=lambda x: x[1], reverse=True
+        )
         sorted_uids, scores_tier = zip(*sorted_pairs)
-        print(sorted_uids, scores_tier)
         # Generate the bar chart with highlighted bars
-        bar_colors = [color if str(uid) not in selected_uids else '#00FFFF' for uid in sorted_uids]
+        bar_colors = [
+            color if str(uid) not in selected_uids else "#00FFFF" for uid in sorted_uids
+        ]
         fig = go.Figure(
             data=[
-                go.Bar(x=[str(uid) for uid in sorted_uids], y=scores_tier, marker_color=bar_colors)
+                go.Bar(
+                    x=[str(uid) for uid in sorted_uids],
+                    y=scores_tier,
+                    marker_color=bar_colors,
+                )
             ],
         )
         # Update layout with sorted tick values
@@ -143,14 +153,14 @@ if uids:
                 tickmode="array",
                 # Show only every 5th uid to reduce density
                 tickvals=[str(uid) for i, uid in enumerate(sorted_uids) if i % 5 == 0],
-                ticktext=[str(uid) for i, uid in enumerate(sorted_uids) if i % 5 == 0]
+                ticktext=[str(uid) for i, uid in enumerate(sorted_uids) if i % 5 == 0],
             ),
             title_font=dict(size=14, family="monospace", color="#333"),
             xaxis_tickangle=-45,
-            xaxis_type="category"
+            xaxis_type="category",
         )
         st.plotly_chart(fig)
-        
+
         # Display table of selected UIDs
         if selected_uids:
             st.markdown("**Selected UIDs Details**")
@@ -158,3 +168,83 @@ if uids:
             st.dataframe(selected_data, use_container_width=True)
 else:
     st.write("No scores found for the selected tier.")
+
+last_minutes = st.slider("Last Minutes", min_value=1, max_value=60 * 6, value=60)
+
+
+# Sample data extraction
+batch_reports = requests.get(
+    f"https://testnet-report.condenses.ai/api/get-batch-reports/{last_minutes}"
+).json()["batch_reports"]
+
+
+# Data transformation
+def transform_data(batch_reports):
+    records = []
+    for report in batch_reports:
+        timestamp = report["timestamp"]
+        batch = report["batch_report"]
+        for idx, uid in batch["uid"].items():
+            records.append(
+                {
+                    "timestamp": timestamp,
+                    "uid": uid,
+                    "perplexity": batch["perplexity"].get(str(idx), "N/A"),
+                    "accelerate_metrics": batch["accelerate_metrics"].get(
+                        str(idx), "N/A"
+                    ),
+                    "rating_change": batch["rating_change"].get(str(idx), "N/A"),
+                    "invalid_reasons": batch["invalid_reasons"].get(str(idx), ""),
+                }
+            )
+    return pd.DataFrame(records)
+
+
+data = transform_data(batch_reports)
+
+specific_uids = st.multiselect("Select UIDs to highlight", data["uid"].unique())
+
+if specific_uids:
+    data = data[data["uid"].isin(specific_uids)]
+
+# Convert timestamp to human-readable format
+data["timestamp"] = pd.to_datetime(data["timestamp"], unit="s")
+
+heatmap_cols = st.columns([1, 1])
+with heatmap_cols[0]:
+    display_win_loss_matrix(data)
+
+with heatmap_cols[1]:
+    display_na_rates(data, "perplexity")
+
+# Line chart for performance metrics
+st.subheader("Node Performance Over Time")
+metric_choice = st.selectbox(
+    "Select Metric to Visualize", ["perplexity", "accelerate_metrics"]
+)
+filtered_data = data[data[metric_choice] != "N/A"]
+
+fig = px.line(
+    filtered_data,
+    x="timestamp",
+    y=metric_choice,
+    color="uid",
+    title=f"{metric_choice.capitalize()} Over Time",
+    markers=True,
+)
+st.plotly_chart(fig)
+
+# Invalid reasons analysis
+st.subheader("Invalid Reasons")
+invalid_data = data[data["invalid_reasons"] != ""]
+invalid_summary = invalid_data["invalid_reasons"].value_counts().reset_index()
+invalid_summary.columns = ["Reason", "Count"]
+
+fig = px.bar(
+    invalid_summary, x="Reason", y="Count", title="Frequency of Invalid Reasons"
+)
+st.plotly_chart(fig)
+
+# Interactive table
+st.subheader("Detailed Data Table")
+st.dataframe(data)
