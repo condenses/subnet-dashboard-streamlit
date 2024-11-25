@@ -20,7 +20,7 @@ st.markdown(
 )
 
 # Fetch reports from API
-response = requests.get("https://report.condenses.ai/api/get-reports")
+response = requests.get("https://report.condenses.ai/api/get-metadata")
 reports = response.json()
 st.session_state.stats = response
 
@@ -43,12 +43,12 @@ with col1:
     hotkey = name_to_hotkey[selected_name]
     st.toast(f"Selected {selected_name}", icon="🔍")
 # Find report for the selected hotkey
-for report in reports["reports"]:
+for report in reports["metadata"]:
     if report["hotkey"] == hotkey:
         break
 
 # Extract metadata and calculate tier distribution
-metadata = report["report"]["metadata"]
+metadata = report["metadata"]
 
 tier_distribution = {}
 scores = {}
@@ -174,7 +174,7 @@ last_minutes = st.slider("Last Minutes", min_value=1, max_value=60 * 6, value=60
 
 # Sample data extraction
 batch_reports = requests.get(
-    f"https://testnet-report.condenses.ai/api/get-batch-reports/{last_minutes}"
+    f"https://report.condenses.ai/api/get-batch-reports/{last_minutes}"
 ).json()["batch_reports"]
 
 
