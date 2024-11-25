@@ -154,3 +154,126 @@ def display_na_rates(data, metric):
     )
 
     st.plotly_chart(fig, use_container_width=True)
+
+
+
+def compute_pairwise_win_fraction(battles):
+    # Times each model wins as Model A
+    a_win_ptbl = pd.pivot_table(
+        battles[battles['winner'] == "model_a"],
+        index="model_a", columns="model_b", aggfunc="size", fill_value=0
+    )
+
+    # Table counting times each model wins as Model B
+    b_win_ptbl = pd.pivot_table(
+        battles[battles['winner'] == "model_b"],
+        index="model_a", columns="model_b", aggfunc="size", fill_value=0
+    )
+
+    # Table counting number of A-B pairs
+    num_battles_ptbl = pd.pivot_table(
+        battles,
+        index="model_a", columns="model_b", aggfunc="size", fill_value=0
+    )
+
+    # Computing the proportion of wins for each model as A and as B
+    # against all other models
+    row_beats_col_freq = (
+        (a_win_ptbl + b_win_ptbl.T) /
+        (num_battles_ptbl + num_battles_ptbl.T)
+    )
+
+    # Arrange ordering according to proportion of wins
+    prop_wins = row_beats_col_freq.mean(axis=1).sort_values(ascending=False)
+    model_names = list(prop_wins.keys())
+    row_beats_col = row_beats_col_freq.loc[model_names, model_names]
+    return row_beats_col
+
+def visualize_pairwise_win_fraction(battles, title):
+    row_beats_col = compute_pairwise_win_fraction(battles)
+    # Sort by UID number
+    ordering = sorted(row_beats_col.index, key=lambda x: int(x.split('_')[1]))
+    row_beats_col = row_beats_col.loc[ordering, ordering]
+    
+    fig = px.imshow(
+        row_beats_col,
+        color_continuous_scale='RdBu', 
+        text_auto=".2f",
+        title=title
+    )
+    fig.update_layout(
+        xaxis_title="Model B: Loser",
+        yaxis_title="Model A: Winner", 
+        xaxis_side="top",
+        height=600,
+        width=600,
+        title_y=0.07,
+        title_x=0.5
+    )
+    fig.update_traces(
+        hovertemplate="Model A: %{y}<br>Model B: %{x}<br>Fraction of A Wins: %{z}<extra></extra>"
+    )
+    return fig
+
+
+
+def transform_battles_data(batch_reports):
+    battles = []
+    for report in batch_reports:
+        timestamp = report["timestamp"]
+        batch = report["batch_report"]
+        task = report["task"]
+        
+        # Get all UIDs and their rating changes
+        for i in range(len(batch["uid"])):
+            for j in range(i + 1, len(batch["uid"])):
+                uid_a = batch["uid"][str(i)]
+                uid_b = batch["uid"][str(j)]
+                
+                # Extract rating changes
+                rating_a = batch["rating_change"][str(i)]
+                rating_b = batch["rating_change"][str(j)]
+                
+                # Parse rating changes to determine winner
+                old_rating_a, new_rating_a = map(int, rating_a.split(" -> "))
+                old_rating_b, new_rating_b = map(int, rating_b.split(" -> "))
+                
+                winner = "tie"
+                if new_rating_a - old_rating_a > new_rating_b - old_rating_b:
+                    winner = "model_a"
+                elif new_rating_b - old_rating_b > new_rating_a - old_rating_a:
+                    winner = "model_b"
+                
+                battles.append({
+                    "model_a": f"UID_{uid_a}",
+                    "model_b": f"UID_{uid_b}",
+                    "winner": winner,
+                    "task": task,
+                    "timestamp": timestamp
+                })
+    
+    return pd.DataFrame(battles)
+
+def visualize_battle_count(battles, title):
+    ptbl = pd.pivot_table(battles, index="model_a", columns="model_b", aggfunc="size",
+                         fill_value=0)
+    battle_counts = ptbl + ptbl.T
+    
+    # Sort by UID number
+    ordering = sorted(battle_counts.index, key=lambda x: int(x.split('_')[1]))
+    
+    fig = px.imshow(battle_counts.loc[ordering, ordering],
+                    title=title, text_auto=True)
+    fig.update_layout(
+        xaxis_title="Model B", 
+        yaxis_title="Model A",
+        xaxis_side="top",
+        height=600,
+        width=600,
+        title_y=0.07,
+        title_x=0.5
+    )
+    fig.update_traces(
+        hovertemplate="Model A: %{y}<br>Model B: %{x}<br>Count: %{z}<extra></extra>"
+    )
+    return fig

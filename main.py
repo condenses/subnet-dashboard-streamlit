@@ -3,7 +3,7 @@ import requests
 import plotly.graph_objects as go
 import pandas as pd
 import plotly.express as px
-from utils import display_win_loss_matrix, display_na_rates
+from utils import (display_win_loss_matrix, display_na_rates, visualize_battle_count, visualize_pairwise_win_fraction, transform_battles_data)
 
 # Set up page configuration with a custom layout and favicon
 st.set_page_config(page_title="Leaderboard - Neural Condense Subnet", layout="wide")
@@ -178,9 +178,11 @@ batch_reports = requests.get(
 ).json()["batch_reports"]
 
 
+
 # Data transformation
 def transform_data(batch_reports):
     records = []
+    battle_logs = {}
     for report in batch_reports:
         timestamp = report["timestamp"]
         batch = report["batch_report"]
@@ -209,13 +211,40 @@ if specific_uids:
 
 # Convert timestamp to human-readable format
 data["timestamp"] = pd.to_datetime(data["timestamp"], unit="s")
+display_na_rates(data, "perplexity")
 
-heatmap_cols = st.columns([1, 1])
-with heatmap_cols[0]:
-    display_win_loss_matrix(data)
+# Transform the batch reports into battle data
+battles_df = transform_battles_data(batch_reports)
 
-with heatmap_cols[1]:
-    display_na_rates(data, "perplexity")
+win_rates = pd.DataFrame()
+for model in battles_df["model_a"].unique():
+    model_battles = battles_df[(battles_df["model_a"] == model) | (battles_df["model_b"] == model)]
+    total = len(model_battles)
+    wins = len(model_battles[
+        ((model_battles["model_a"] == model) & (model_battles["winner"] == "model_a")) |
+        ((model_battles["model_b"] == model) & (model_battles["winner"] == "model_b"))
+    ])
+    win_rates.loc[model, "Total Battles"] = total
+    win_rates.loc[model, "Wins"] = wins
+    win_rates.loc[model, "Win Rate"] = wins / total if total > 0 else 0
+
+win_rates = win_rates.sort_values("Win Rate", ascending=False)
+# After creating battles_df, add:
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.subheader("Battle Count Matrix")
+    battle_matrix = visualize_battle_count(battles_df, "Battle Count Between UIDs")
+    st.plotly_chart(battle_matrix, key="battle_count_matrix")
+
+with col2:
+    st.subheader("Pairwise Win Fraction") 
+    win_fraction_matrix = visualize_pairwise_win_fraction(battles_df, "Win Fraction Between UIDs")
+    st.plotly_chart(win_fraction_matrix, key="win_fraction_matrix")
+
+with col3:
+    st.subheader("Win Rate Analysis")
+    st.dataframe(win_rates)
 
 # Line chart for performance metrics
 st.subheader("Node Performance Over Time")
@@ -248,3 +277,7 @@ st.plotly_chart(fig)
 # Interactive table
 st.subheader("Detailed Data Table")
 st.dataframe(data)
+
+
+
+
