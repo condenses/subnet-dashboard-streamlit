@@ -186,6 +186,8 @@ def transform_data(batch_reports):
     for report in batch_reports:
         timestamp = report["timestamp"]
         batch = report["batch_report"]
+        if "perplexity" not in batch:
+            continue
         for idx, uid in batch["uid"].items():
             records.append(
                 {
