@@ -219,7 +219,7 @@ if specific_uids:
 
 # Convert timestamp to human-readable format
 data["timestamp"] = pd.to_datetime(data["timestamp"], unit="s")
-display_na_rates(data, "perplexity")
+display_na_rates(data, "accuracy")
 
 # Draw bar chart for accuracy
 st.subheader("Accuracy Distribution")
