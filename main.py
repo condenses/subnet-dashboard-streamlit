@@ -186,14 +186,20 @@ def transform_data(batch_reports):
     for report in batch_reports:
         timestamp = report["timestamp"]
         batch = report["batch_report"]
-        if "perplexity" not in batch:
-            continue
         for idx, uid in batch["uid"].items():
+            accuracy = batch.get("accuracy", None)
+            perplexity = batch.get("perplexity", None)
+            if accuracy is not None:
+                accuracy = accuracy.get(str(idx), 0)
+                if accuracy == "N/A":
+                    accuracy = 0
+
             records.append(
                 {
                     "timestamp": timestamp,
                     "uid": uid,
-                    "perplexity": batch["perplexity"].get(str(idx), "N/A"),
+                    "perplexity": perplexity.get(str(idx), "N/A") if perplexity else "N/A",
+                    "accuracy": accuracy,
                     "accelerate_metrics": batch["accelerate_metrics"].get(
                         str(idx), "N/A"
                     ),
@@ -214,6 +220,37 @@ if specific_uids:
 # Convert timestamp to human-readable format
 data["timestamp"] = pd.to_datetime(data["timestamp"], unit="s")
 display_na_rates(data, "perplexity")
+
+# Draw bar chart for accuracy
+st.subheader("Accuracy Distribution")
+data['accuracy'] = pd.to_numeric(data['accuracy'], errors='coerce')
+# Filter out None values before calculating mean
+data_with_accuracy = data[data['accuracy'].notna()]
+accuracy_by_uid = data_with_accuracy.groupby('uid')['accuracy'].mean().sort_values(ascending=False)
+
+fig = go.Figure(data=[
+    go.Bar(
+        x=accuracy_by_uid.index,
+        y=accuracy_by_uid.values,
+        marker_color=['#1f77b4' if str(uid) not in specific_uids else '#00FFFF' for uid in accuracy_by_uid.index]
+    )
+])
+fig.update_layout(
+    title="Average Accuracy by UID",
+    xaxis_title="uid",
+    yaxis_title="accuracy",
+    xaxis=dict(
+        tickmode="array",
+        # Show only every 5th uid to reduce density
+        tickvals=[str(uid) for i, uid in enumerate(accuracy_by_uid.index) if i % 5 == 0],
+        ticktext=[str(uid) for i, uid in enumerate(accuracy_by_uid.index) if i % 5 == 0],
+    ),
+    title_font=dict(size=14, family="monospace", color="#333"),
+    xaxis_tickangle=-45,
+    xaxis_type="category",
+    yaxis_range=[0, 1]
+)
+st.plotly_chart(fig)
 
 # Transform the batch reports into battle data
 battles_df = transform_battles_data(batch_reports)
@@ -248,23 +285,6 @@ with col3:
     st.subheader("Win Rate Analysis")
     st.dataframe(win_rates)
 
-# Line chart for performance metrics
-st.subheader("Node Performance Over Time")
-metric_choice = st.selectbox(
-    "Select Metric to Visualize", ["perplexity", "accelerate_metrics"]
-)
-filtered_data = data[data[metric_choice] != "N/A"]
-
-fig = px.line(
-    filtered_data,
-    x="timestamp",
-    y=metric_choice,
-    color="uid",
-    title=f"{metric_choice.capitalize()} Over Time",
-    markers=True,
-)
-st.plotly_chart(fig)
-
 # Invalid reasons analysis
 st.subheader("Invalid Reasons")
 invalid_data = data[data["invalid_reasons"] != ""]
@@ -279,7 +299,3 @@ st.plotly_chart(fig)
 # Interactive table
 st.subheader("Detailed Data Table")
 st.dataframe(data)
-
-
-
-
