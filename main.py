@@ -187,18 +187,12 @@ def transform_data(batch_reports):
         timestamp = report["timestamp"]
         batch = report["batch_report"]
         for idx, uid in batch["uid"].items():
-            accuracy = batch.get("accuracy", None)
-            perplexity = batch.get("perplexity", None)
-            if accuracy is not None:
-                accuracy = accuracy.get(str(idx), 0)
-                if accuracy == "N/A":
-                    accuracy = 0
+            accuracy = batch["accuracy"][str(idx)]
 
             records.append(
                 {
                     "timestamp": timestamp,
                     "uid": uid,
-                    "perplexity": perplexity.get(str(idx), "N/A") if perplexity else "N/A",
                     "accuracy": accuracy,
                     "accelerate_metrics": batch["accelerate_metrics"].get(
                         str(idx), "N/A"
@@ -297,5 +291,5 @@ fig = px.bar(
 st.plotly_chart(fig)
 
 # Interactive table
-st.subheader("Detailed Data Table")
+st.subheader("Full Batches Data")
 st.dataframe(data)
