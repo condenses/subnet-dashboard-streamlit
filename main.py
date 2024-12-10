@@ -3,7 +3,7 @@ import requests
 import plotly.graph_objects as go
 import pandas as pd
 import plotly.express as px
-from utils import (display_win_loss_matrix, display_na_rates, visualize_battle_count, visualize_pairwise_win_fraction, transform_battles_data)
+from utils import (display_win_loss_matrix, display_na_rates, visualize_battle_count, visualize_pairwise_win_fraction, transform_battles_data, show_matrix_overlap)
 
 # Set up page configuration with a custom layout and favicon
 st.set_page_config(page_title="Leaderboard - Neural Condense Subnet", layout="wide")
@@ -104,6 +104,8 @@ with col2:
         title_font=dict(size=18, family="monospace", color="#333"),
     )
     st.plotly_chart(fig)
+
+show_matrix_overlap(reports)
 
 # Dropdown for tier selection
 tiers = ["research", "inference_0", "inference_1"]
