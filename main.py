@@ -21,7 +21,7 @@ st.markdown(
 
 # Fetch reports from API
 
-response = requests.get("http://localhost:16524/api/get-metadata")
+response = requests.get("https://report.condenses.ai/api/get-metadata")
 data = response.json()  
 all_metadata = data.get("metadata", [])
 latest_reports = []
