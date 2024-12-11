@@ -20,9 +20,30 @@ st.markdown(
 )
 
 # Fetch reports from API
-response = requests.get("https://report.condenses.ai/api/get-metadata")
-reports = response.json()
-st.session_state.stats = response
+
+response = requests.get("http://localhost:16524/api/get-metadata")
+data = response.json()  
+all_metadata = data.get("metadata", [])
+latest_reports = []
+
+for doc in all_metadata:
+    _id = doc.get("_id")
+    uid = doc.get("uid")
+    hotkey = doc.get("hotkey")
+    reports = doc.get("reports", [])
+
+    if reports:
+        latest_report = reports[0]  
+        latest_reports.append({
+            "uid": uid,
+            "_id": _id,
+            "hotkey": hotkey,
+            "metadata": latest_report.get("metadata"),
+            "timestamp": latest_report.get("timestamp")
+        })
+
+reports=latest_reports
+st.session_state.stats = reports
 
 # Mapping hotkeys to validator names
 hotkey_to_name = {
@@ -43,7 +64,7 @@ with col1:
     hotkey = name_to_hotkey[selected_name]
     st.toast(f"Selected {selected_name}", icon="🔍")
 # Find report for the selected hotkey
-for report in reports["metadata"]:
+for report in reports:
     if report["hotkey"] == hotkey:
         break
 

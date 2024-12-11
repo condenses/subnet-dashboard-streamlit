@@ -290,7 +290,7 @@ def show_matrix_overlap(data):
     try:
         lst_metadata = []
         # Process each validator's metadata
-        for val in data['metadata']:
+        for val in data:
             if val['uid'] == 3:
                 continue
             sorted_data = dict(
