@@ -6,7 +6,7 @@ from utils import (
     display_invalid_rates,
     show_matrix_overlap,
 )
-
+from datetime import datetime
 
 # Constants
 PAGE_TITLE = "Leaderboard - Neural Condense Subnet"
@@ -185,10 +185,13 @@ def main():
     
     if report:
         metadata = report["metadata"]
-        
+        update_timestamp: float = report["timestamp"]
+        update_timestamp = datetime.fromtimestamp(update_timestamp)
         tier_distribution, scores = get_tier_distribution(metadata)
         
         with col1:
+            updated_minutes_ago = (datetime.now() - update_timestamp).total_seconds() / 60
+            st.markdown(f"**Last updated {updated_minutes_ago:.0f} minutes ago**", unsafe_allow_html=True)
             display_validator_info(selected_name)
             
         with col2:
