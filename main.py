@@ -235,29 +235,10 @@ def transform_data(batch_reports):
 
 data = transform_data(batch_reports)
 
-specific_uids = st.multiselect("Select UIDs to highlight", data["uid"].unique())
-
-if specific_uids:
-    data = data[data["uid"].isin(specific_uids)]
-
-# Convert timestamp to human-readable format
 data["timestamp"] = pd.to_datetime(data["timestamp"], unit="s")
 display_na_rates(data, "accuracy")
 
-# Draw bar chart for accuracy
-st.subheader("Accuracy Distribution")
-data['accuracy'] = pd.to_numeric(data['accuracy'], errors='coerce')
-# Filter out None values before calculating mean
-data_with_accuracy = data[data['accuracy'].notna()]
-accuracy_by_uid = data_with_accuracy.groupby('uid')['accuracy'].mean().sort_values(ascending=False)
 
-fig = go.Figure(data=[
-    go.Bar(
-        x=accuracy_by_uid.index,
-        y=accuracy_by_uid.values,
-        marker_color=['#1f77b4' if str(uid) not in specific_uids else '#00FFFF' for uid in accuracy_by_uid.index]
-    )
-])
 
 # Invalid reasons analysis
 st.subheader("Invalid Reasons")
