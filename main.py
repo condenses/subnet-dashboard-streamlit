@@ -3,11 +3,7 @@ import requests
 import plotly.graph_objects as go
 import pandas as pd
 from utils import (
-    display_win_loss_matrix,
     display_invalid_rates,
-    visualize_battle_count,
-    visualize_pairwise_win_fraction,
-    transform_battles_data,
     show_matrix_overlap,
 )
 
@@ -21,7 +17,7 @@ HOTKEY_TO_NAME = {
     "5HEo565WAy4Dbq3Sv271SAi7syBSofyfhhwRNjFNSM2gP9M2": "YUMA",
     "5FFApaS75bv5pJHfAp2FVLBj9ZaXuFDjEypsaBNc1wCfe52v": "RoundTable21",
     "5F2CsUDVbRbVMXTh9fAzF9GacjVX7UapvRxidrxe7z8BYckQ": "Rizzo", 
-    "5Eq8b9p6zJMjEXyH9sX4DRMYspnUyorEKq3Zmha1WN6AC4sf": "Cruicible Labs",
+    "5HYk8DMKWK8TJyPzZJ9vmZk7B5NPCgjnZoyZ1ZsB54RXdN47": "Cruicible Labs",
 }
 TIERS = ["research", "inference_0", "inference_1"]
 TIER_COLORS = ["#636EFA", "#EF553B", "#00CC96"]
@@ -181,55 +177,60 @@ def main():
         )
         hotkey = name_to_hotkey[selected_name]
         st.toast(f"Selected {selected_name}", icon="🔍")
+    
+    try:
+        report = next(r for r in reports if r["hotkey"] == hotkey)
+    except StopIteration:
+        report = None
+    
+    if report:
+        metadata = report["metadata"]
         
-    report = next(r for r in reports if r["hotkey"] == hotkey)
-    metadata = report["metadata"]
-    
-    tier_distribution, scores = get_tier_distribution(metadata)
-    
-    with col1:
-        display_validator_info(selected_name)
+        tier_distribution, scores = get_tier_distribution(metadata)
         
-    with col2:
-        st.plotly_chart(plot_tier_distribution(tier_distribution))
-    
-    selected_tier = st.selectbox("Select a Tier", TIERS)
-    color = TIER_COLORS[TIERS.index(selected_tier)] if selected_tier in TIERS else "#FFA15A"
-    
-    uids = [uid for uid, data in metadata.items() if data["tier"] == selected_tier]
-    
-    if uids:
-        widths = st.columns([4, 6])
-        with widths[0]:
-            st.markdown("**Metadata Table**")
-            metadata_df = pd.DataFrame(metadata).transpose()
-            metadata_df = metadata_df[metadata_df["tier"].isin(TIERS)]
-            selected_uids = st.multiselect("Select UIDs to highlight", metadata_df.index)
-            st.dataframe(metadata_df, use_container_width=True)
+        with col1:
+            display_validator_info(selected_name)
             
-        with widths[1]:
-            st.plotly_chart(plot_scores(uids, scores, selected_uids, color))
-            
-            if selected_uids:
-                st.markdown("**Selected UIDs Details**")
-                selected_data = metadata_df.loc[selected_uids]
-                st.dataframe(selected_data, use_container_width=True)
-    else:
-        st.write("No scores found for the selected tier.")
+        with col2:
+            st.plotly_chart(plot_tier_distribution(tier_distribution))
         
-    last_minutes = st.slider("Last Minutes", min_value=1, max_value=60 * 6, value=60)
-    
-    batch_reports = requests.get(
-        f"{API_BASE_URL}/get-batch-reports/{last_minutes}"
-    ).json()["batch_reports"]
-    
-    data = transform_batch_data(batch_reports)
-    show_matrix_overlap(reports)
-    display_invalid_rates(data)
-    # Format timestamp to be human readable
-    data["timestamp"] = pd.to_datetime(data["timestamp"]).dt.strftime("%Y-%m-%d %H:%M:%S")
-    st.subheader("Full Batches Data")
-    st.dataframe(data)
+        selected_tier = st.selectbox("Select a Tier", TIERS)
+        color = TIER_COLORS[TIERS.index(selected_tier)] if selected_tier in TIERS else "#FFA15A"
+        
+        uids = [uid for uid, data in metadata.items() if data["tier"] == selected_tier]
+        
+        if uids:
+            widths = st.columns([4, 6])
+            with widths[0]:
+                st.markdown("**Metadata Table**")
+                metadata_df = pd.DataFrame(metadata).transpose()
+                metadata_df = metadata_df[metadata_df["tier"].isin(TIERS)]
+                selected_uids = st.multiselect("Select UIDs to highlight", metadata_df.index)
+                st.dataframe(metadata_df, use_container_width=True)
+                
+            with widths[1]:
+                st.plotly_chart(plot_scores(uids, scores, selected_uids, color))
+                
+                if selected_uids:
+                    st.markdown("**Selected UIDs Details**")
+                    selected_data = metadata_df.loc[selected_uids]
+                    st.dataframe(selected_data, use_container_width=True)
+        else:
+            st.write("No scores found for the selected tier.")
+            
+        last_minutes = st.slider("Last Minutes", min_value=1, max_value=60 * 6, value=60)
+        
+        batch_reports = requests.get(
+            f"{API_BASE_URL}/get-batch-reports/{last_minutes}"
+        ).json()["batch_reports"]
+        
+        data = transform_batch_data(batch_reports)
+        show_matrix_overlap(reports)
+        display_invalid_rates(data)
+        # Format timestamp to be human readable
+        data["timestamp"] = pd.to_datetime(data["timestamp"]).dt.strftime("%Y-%m-%d %H:%M:%S")
+        st.subheader("Full Batches Data")
+        st.dataframe(data)
 
 if __name__ == "__main__":
     main()
