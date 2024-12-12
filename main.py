@@ -48,8 +48,11 @@ st.session_state.stats = reports
 # Mapping hotkeys to validator names
 hotkey_to_name = {
     "5GKH9FPPnWSUoeeTJp19wVtd84XqFW4pyK2ijV2GsFbhTrP1": "Taostats Validator",
+    "5F4tQyWrhfGVcNhoqeiNsR6KjD4wMZ2kfhLj4oHYuyHbZAc3": "OpenTensor Foundation",
+    "5HEo565WAy4Dbq3Sv271SAi7syBSofyfhhwRNjFNSM2gP9M2": "YUMA",
     "5FFApaS75bv5pJHfAp2FVLBj9ZaXuFDjEypsaBNc1wCfe52v": "RoundTable21",
     "5F2CsUDVbRbVMXTh9fAzF9GacjVX7UapvRxidrxe7z8BYckQ": "Rizzo",
+    "5Eq8b9p6zJMjEXyH9sX4DRMYspnUyorEKq3Zmha1WN6AC4sf": "Cruicible Labs",
 }
 name_to_hotkey = {v: k for k, v in hotkey_to_name.items()}
 
@@ -169,9 +172,9 @@ if uids:
         )
         # Update layout with sorted tick values
         fig.update_layout(
-            title="Elo Ranking",
+            title="Score",
             xaxis_title="uid",
-            yaxis_title="elo",
+            yaxis_title="accuracy",
             xaxis=dict(
                 tickmode="array",
                 # Show only every 5th uid to reduce density
@@ -255,55 +258,6 @@ fig = go.Figure(data=[
         marker_color=['#1f77b4' if str(uid) not in specific_uids else '#00FFFF' for uid in accuracy_by_uid.index]
     )
 ])
-fig.update_layout(
-    title="Average Accuracy by UID",
-    xaxis_title="uid",
-    yaxis_title="accuracy",
-    xaxis=dict(
-        tickmode="array",
-        # Show only every 5th uid to reduce density
-        tickvals=[str(uid) for i, uid in enumerate(accuracy_by_uid.index) if i % 5 == 0],
-        ticktext=[str(uid) for i, uid in enumerate(accuracy_by_uid.index) if i % 5 == 0],
-    ),
-    title_font=dict(size=14, family="monospace", color="#333"),
-    xaxis_tickangle=-45,
-    xaxis_type="category",
-    yaxis_range=[0, 1]
-)
-st.plotly_chart(fig)
-
-# Transform the batch reports into battle data
-battles_df = transform_battles_data(batch_reports)
-
-win_rates = pd.DataFrame()
-for model in battles_df["model_a"].unique():
-    model_battles = battles_df[(battles_df["model_a"] == model) | (battles_df["model_b"] == model)]
-    total = len(model_battles)
-    wins = len(model_battles[
-        ((model_battles["model_a"] == model) & (model_battles["winner"] == "model_a")) |
-        ((model_battles["model_b"] == model) & (model_battles["winner"] == "model_b"))
-    ])
-    win_rates.loc[model, "Total Battles"] = total
-    win_rates.loc[model, "Wins"] = wins
-    win_rates.loc[model, "Win Rate"] = wins / total if total > 0 else 0
-
-win_rates = win_rates.sort_values("Win Rate", ascending=False)
-# After creating battles_df, add:
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    st.subheader("Battle Count Matrix")
-    battle_matrix = visualize_battle_count(battles_df, "Battle Count Between UIDs")
-    st.plotly_chart(battle_matrix, key="battle_count_matrix")
-
-with col2:
-    st.subheader("Pairwise Win Fraction") 
-    win_fraction_matrix = visualize_pairwise_win_fraction(battles_df, "Win Fraction Between UIDs")
-    st.plotly_chart(win_fraction_matrix, key="win_fraction_matrix")
-
-with col3:
-    st.subheader("Win Rate Analysis")
-    st.dataframe(win_rates)
 
 # Invalid reasons analysis
 st.subheader("Invalid Reasons")
