@@ -97,49 +97,40 @@ def display_win_loss_matrix(data):
         st.error(f"Error generating win/loss matrix: {str(e)}")
 
 
-def display_na_rates(data, metric):
+def display_invalid_rates(invalid_reasons):
     """
-    Display a stacked bar chart showing N/A vs non-N/A rates for each UID.
-
-    Args:
-        data (pd.DataFrame): DataFrame containing the data
-        metric (str): Column name to analyze for N/A rates
+    Display a stacked bar chart showing invalid vs valid rates for each UID.
     """
-
-    # Calculate N/A rates for each UID
-    na_counts = (
-        data.groupby("uid")[metric]
-        .apply(
-            lambda x: (x == "N/A")
-            .value_counts(normalize=True)
-            .reindex([True, False])
-            .fillna(0)
-        )
-        .unstack()
+    # Calculate invalid rates for each UID
+    invalid_rates = (
+        invalid_reasons.groupby("uid")["invalid_reasons"]
+        .apply(lambda x: (x != "").mean())  # Calculate proportion of invalid entries
+        .reset_index()
+        .rename(columns={"invalid_reasons": "Invalid Rate"})
     )
-
-    # Rename columns for clarity
-    na_counts.columns = ["N/A Rate", "Valid Rate"]
+    
+    # Add valid rate column
+    invalid_rates["Valid Rate"] = 1 - invalid_rates["Invalid Rate"]
 
     # Create stacked bar chart
     fig = go.Figure()
 
-    # Add N/A portion
+    # Add Invalid portion
     fig.add_trace(
         go.Bar(
-            name="N/A",
-            x=na_counts.index,
-            y=na_counts["N/A Rate"],
+            name="Invalid",
+            x=invalid_rates["uid"],
+            y=invalid_rates["Invalid Rate"],
             marker_color="#EF553B",
         )
     )
 
-    # Add valid data portion
+    # Add Valid portion
     fig.add_trace(
         go.Bar(
             name="Valid",
-            x=na_counts.index,
-            y=na_counts["Valid Rate"],
+            x=invalid_rates["uid"],
+            y=invalid_rates["Valid Rate"],
             marker_color="#636EFA",
         )
     )
@@ -147,7 +138,7 @@ def display_na_rates(data, metric):
     # Update layout
     fig.update_layout(
         barmode="stack",
-        title=f"Availability by UID",
+        title="Invalid/Valid Rate by UID",
         xaxis_title="UID",
         yaxis_title="Proportion",
         yaxis_tickformat=",.0%",
