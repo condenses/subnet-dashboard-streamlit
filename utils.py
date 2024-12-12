@@ -222,37 +222,40 @@ def visualize_pairwise_win_fraction(battles, title):
 def transform_battles_data(batch_reports):
     battles = []
     for report in batch_reports:
-        timestamp = report["timestamp"]
-        batch = report["batch_report"]
-        task = report["task"]
-        
-        # Get all UIDs and their rating changes
-        for i in range(len(batch["uid"])):
-            for j in range(i + 1, len(batch["uid"])):
-                uid_a = batch["uid"][str(i)]
-                uid_b = batch["uid"][str(j)]
-                
-                # Extract rating changes
-                rating_a = batch["rating_change"][str(i)]
-                rating_b = batch["rating_change"][str(j)]
-                
-                # Parse rating changes to determine winner
-                old_rating_a, new_rating_a = map(int, rating_a.split(" -> "))
-                old_rating_b, new_rating_b = map(int, rating_b.split(" -> "))
-                
-                winner = "tie"
-                if new_rating_a - old_rating_a > new_rating_b - old_rating_b:
-                    winner = "model_a"
-                elif new_rating_b - old_rating_b > new_rating_a - old_rating_a:
-                    winner = "model_b"
-                
-                battles.append({
-                    "model_a": f"UID_{uid_a}",
-                    "model_b": f"UID_{uid_b}",
-                    "winner": winner,
-                    "task": task,
-                    "timestamp": timestamp
-                })
+        try:
+            timestamp = report["timestamp"]
+            batch = report["batch_report"]
+            task = report["task"]
+            
+            # Get all UIDs and their rating changes
+            for i in range(len(batch["uid"])):
+                for j in range(i + 1, len(batch["uid"])):
+                    uid_a = batch["uid"][str(i)]
+                    uid_b = batch["uid"][str(j)]
+                    
+                    # Extract rating changes
+                    rating_a = batch["rating_change"][str(i)]
+                    rating_b = batch["rating_change"][str(j)]
+                    
+                    # Parse rating changes to determine winner
+                    old_rating_a, new_rating_a = map(int, rating_a.split(" -> "))
+                    old_rating_b, new_rating_b = map(int, rating_b.split(" -> "))
+                    
+                    winner = "tie"
+                    if new_rating_a - old_rating_a > new_rating_b - old_rating_b:
+                        winner = "model_a"
+                    elif new_rating_b - old_rating_b > new_rating_a - old_rating_a:
+                        winner = "model_b"
+                    
+                    battles.append({
+                        "model_a": f"UID_{uid_a}",
+                        "model_b": f"UID_{uid_b}",
+                        "winner": winner,
+                        "task": task,
+                        "timestamp": timestamp
+                    })
+        except Exception as e:
+            print(e)
     
     return pd.DataFrame(battles)
 
