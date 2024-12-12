@@ -207,23 +207,26 @@ def transform_data(batch_reports):
     records = []
     battle_logs = {}
     for report in batch_reports:
-        timestamp = report["timestamp"]
-        batch = report["batch_report"]
-        for idx, uid in batch["uid"].items():
-            accuracy = batch["accuracy"][str(idx)]
+        try:
+            timestamp = report["timestamp"]
+            batch = report["batch_report"]
+            for idx, uid in batch["uid"].items():
+                accuracy = batch["accuracy"][str(idx)]
 
-            records.append(
-                {
-                    "timestamp": timestamp,
-                    "uid": uid,
-                    "accuracy": accuracy,
-                    "accelerate_metrics": batch["accelerate_metrics"].get(
-                        str(idx), "N/A"
-                    ),
-                    "rating_change": batch["rating_change"].get(str(idx), "N/A"),
-                    "invalid_reasons": batch["invalid_reasons"].get(str(idx), ""),
-                }
-            )
+                records.append(
+                    {
+                        "timestamp": timestamp,
+                        "uid": uid,
+                        "accuracy": accuracy,
+                        "accelerate_metrics": batch["accelerate_metrics"].get(
+                            str(idx), "N/A"
+                        ),
+                        "rating_change": batch["rating_change"].get(str(idx), "N/A"),
+                        "invalid_reasons": batch["invalid_reasons"].get(str(idx), ""),
+                    }
+                )
+        except Exception as e:
+            print(e)
     return pd.DataFrame(records)
 
 
