@@ -83,6 +83,14 @@ def display_validator_info(selected_name):
         unsafe_allow_html=True,
     )
 
+def fetch_coldkey_uid_map():
+    """Fetch UIDs for the selected coldkey using the API."""
+    response = requests.get(f"{API_BASE_URL}/get_coldkey_report/")
+    if response.status_code == 200:
+        return response.json().get("coldkey_uid_map", [])
+    else:
+        return []
+
 def plot_tier_distribution(tier_distribution):
     labels = list(tier_distribution.keys())
     values = list(tier_distribution.values())
@@ -102,7 +110,7 @@ def plot_tier_distribution(tier_distribution):
     )
     return fig
 
-def plot_scores(uids, scores, selected_uids, color):
+def plot_scores(uids, scores, selected_uids,uids_coldkey, color):
     sorted_pairs = sorted(
         zip(uids, [scores[uid] for uid in uids]), 
         key=lambda x: x[1], 
@@ -111,10 +119,10 @@ def plot_scores(uids, scores, selected_uids, color):
     sorted_uids, scores_tier = zip(*sorted_pairs)
     
     bar_colors = [
-        color if str(uid) not in selected_uids else "#00FFFF" 
+        "#00FFFF" if str(uid) in selected_uids or str(uid) in uids_coldkey else color
         for uid in sorted_uids
     ]
-    
+    print("Bar Colors Mapping:", list(zip(sorted_uids, bar_colors)))
     fig = go.Figure(data=[
         go.Bar(
             x=[str(uid) for uid in sorted_uids],
@@ -142,7 +150,7 @@ def transform_batch_data(batch_reports):
     records = []
     for report in batch_reports:
         try:
-            timestamp = report["timestamp"]
+            timestamp =  datetime.fromtimestamp(report["timestamp"]).strftime("%Y-%m-%d %H:%M:%S")
             hotkey = report["_id"].split("-")[0]
             validator_name = HOTKEY_TO_NAME.get(hotkey, "Unknown")
             batch = report["batch_report"]
@@ -164,7 +172,7 @@ def main():
     
     reports = fetch_latest_reports()
     st.session_state.stats = reports
-    
+    coldkey_uid_map = fetch_coldkey_uid_map()
     name_to_hotkey = {v: k for k, v in HOTKEY_TO_NAME.items()}
     
     col1, col2 = st.columns([2, 1])
@@ -201,7 +209,6 @@ def main():
         color = TIER_COLORS[TIERS.index(selected_tier)] if selected_tier in TIERS else "#FFA15A"
         
         uids = [uid for uid, data in metadata.items() if data["tier"] == selected_tier]
-        
         if uids:
             widths = st.columns([4, 6])
             with widths[0]:
@@ -210,16 +217,44 @@ def main():
                 metadata_df = metadata_df[metadata_df["tier"].isin(TIERS)]
                 selected_uids = st.multiselect("Select UIDs to highlight", metadata_df.index)
                 st.dataframe(metadata_df, use_container_width=True)
+                # Checkbox to display coldkey-UID map
+                if st.checkbox("Show Coldkey-UID Map"):
+                    st.subheader("Coldkey-UID Map")
+                    coldkey_map_df = pd.DataFrame(list(coldkey_uid_map.items()), columns=["UID", "Coldkey"])
+                    st.dataframe(coldkey_map_df, use_container_width=True)
+                
+                # Selectbox for coldkey selection
+                selected_coldkey = st.selectbox(
+                    "Select Coldkey to Highlight",
+                    [None] + list(set(coldkey_uid_map.values())),
+                    format_func=lambda x: x if x is not None else "None"
+                )
+                
+                # Get UIDs for the selected coldkey
+                if selected_coldkey:
+                    uids_coldkey = [
+                        str(uid) for uid, ck in coldkey_uid_map.items() if ck == selected_coldkey
+                    ]
+                else:
+                    uids_coldkey = []
                 
             with widths[1]:
-                st.plotly_chart(plot_scores(uids, scores, selected_uids, color))
+                st.plotly_chart(plot_scores(uids, scores, selected_uids,uids_coldkey, color))
                 
-                if selected_uids:
+                if selected_uids or uids_coldkey:
                     st.markdown("**Selected UIDs Details**")
-                    selected_data = metadata_df.loc[selected_uids]
-                    st.dataframe(selected_data, use_container_width=True)
-        else:
-            st.write("No scores found for the selected tier.")
+                    
+                    highlighted_uids = list(set(selected_uids) | set(uids_coldkey))
+                    
+                    selected_data = metadata_df.loc[metadata_df.index.intersection(highlighted_uids)]
+                    
+                    # Display the filtered data
+                    if not selected_data.empty:
+                        st.dataframe(selected_data, use_container_width=True)
+                    else:
+                        st.write("No details available for the selected UIDs.")
+                else:
+                    st.write("No scores found for the selected tier.")
             
         last_minutes = st.slider("Last Minutes", min_value=1, max_value=60 * 6, value=60)
         
