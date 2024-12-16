@@ -267,8 +267,27 @@ def main():
         display_invalid_rates(data)
         # Format timestamp to be human readable
         data["timestamp"] = pd.to_datetime(data["timestamp"]).dt.strftime("%Y-%m-%d %H:%M:%S")
+        # st.subheader("Full Batches Data")
+        # st.dataframe(data)
+
         st.subheader("Full Batches Data")
-        st.dataframe(data)
+        selected_coldkey_fullbatch = st.selectbox(
+            "Filter Full Batches Data by Coldkey",
+            [None] + list(set(coldkey_uid_map.values())),
+            format_func=lambda x: x if x is not None else "All Coldkeys",
+        )
+        if selected_coldkey_fullbatch:
+            filtered_uids_fullbatch = [
+                uid for uid, ck in coldkey_uid_map.items() if ck == selected_coldkey_fullbatch
+            ]
+            filtered_data = data[data["uid"].astype(str).isin(filtered_uids_fullbatch)]
+        else:
+            filtered_data = data
+
+        if not filtered_data.empty:
+            st.dataframe(filtered_data, use_container_width=True)
+        else:
+            st.write("No data available for the selected coldkey.")
 
 if __name__ == "__main__":
     main()
