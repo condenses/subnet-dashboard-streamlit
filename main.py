@@ -122,7 +122,6 @@ def plot_scores(uids, scores, selected_uids,uids_coldkey, color):
         "#00FFFF" if str(uid) in selected_uids or str(uid) in uids_coldkey else color
         for uid in sorted_uids
     ]
-    print("Bar Colors Mapping:", list(zip(sorted_uids, bar_colors)))
     fig = go.Figure(data=[
         go.Bar(
             x=[str(uid) for uid in sorted_uids],
@@ -271,14 +270,15 @@ def main():
         # st.dataframe(data)
 
         st.subheader("Full Batches Data")
-        selected_coldkey_fullbatch = st.selectbox(
-            "Filter Full Batches Data by Coldkey",
-            [None] + list(set(coldkey_uid_map.values())),
-            format_func=lambda x: x if x is not None else "All Coldkeys",
+        selected_coldkeys_fullbatch = st.multiselect(
+            "Filter Full Batches Data by Coldkeys",
+            list(set(coldkey_uid_map.values())),
+            default=None,
         )
-        if selected_coldkey_fullbatch:
+
+        if selected_coldkeys_fullbatch:
             filtered_uids_fullbatch = [
-                uid for uid, ck in coldkey_uid_map.items() if ck == selected_coldkey_fullbatch
+                uid for uid, ck in coldkey_uid_map.items() if ck in selected_coldkeys_fullbatch
             ]
             filtered_data = data[data["uid"].astype(str).isin(filtered_uids_fullbatch)]
         else:
@@ -287,7 +287,7 @@ def main():
         if not filtered_data.empty:
             st.dataframe(filtered_data, use_container_width=True)
         else:
-            st.write("No data available for the selected coldkey.")
+            st.write("No data available for the selected coldkeys.")
 
 if __name__ == "__main__":
     main()
