@@ -223,17 +223,15 @@ def main():
                     st.dataframe(coldkey_map_df, use_container_width=True)
                 
                 # Selectbox for coldkey selection
-                selected_coldkey = st.selectbox(
-                    "Select Coldkey to Highlight",
-                    [None] + list(set(coldkey_uid_map.values())),
-                    format_func=lambda x: x if x is not None else "None"
+                selected_coldkeys = st.multiselect(
+                    "Select Coldkey(s) to Highlight",
+                    list(set(coldkey_uid_map.values())),
+                    default=None
                 )
-                
-                # Get UIDs for the selected coldkey
-                if selected_coldkey:
-                    uids_coldkey = [
-                        str(uid) for uid, ck in coldkey_uid_map.items() if ck == selected_coldkey
-                    ]
+
+                if selected_coldkeys:
+                    # Gather all UIDs for the selected coldkeys
+                    uids_coldkey = [str(uid) for uid, ck in coldkey_uid_map.items() if ck in selected_coldkeys]
                 else:
                     uids_coldkey = []
                 
