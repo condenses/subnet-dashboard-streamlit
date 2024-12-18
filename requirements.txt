@@ -3,3 +3,4 @@ plotly
 pandas
 matplotlib
 seaborn
+pygwalker
