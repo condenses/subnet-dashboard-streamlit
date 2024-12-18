@@ -36,7 +36,7 @@ def setup_page():
     )
 
 
-@st.cache_resource
+@st.cache_resource(ttl=60 * 10)
 def fetch_latest_reports():
     response = requests.get(f"{API_BASE_URL}/get-metadata")
     data = response.json()
@@ -91,7 +91,7 @@ def display_validator_info(selected_name):
     )
 
 
-@st.cache_resource
+@st.cache_resource(ttl=60 * 10)
 def fetch_coldkey_uid_map():
     """Fetch UIDs for the selected coldkey using the API."""
     response = requests.get(f"{API_BASE_URL}/get_coldkey_report/")
@@ -295,7 +295,7 @@ def main():
             "Last Minutes", min_value=1, max_value=60 * 6, value=60
         )
 
-        @st.cache_resource
+        @st.cache_resource(ttl=60 * 10)
         def get_pyg_batch_data(last_minutes):
             batch_reports = requests.get(
                 f"{API_BASE_URL}/get-batch-reports/{last_minutes}"
