@@ -17,7 +17,11 @@ HOTKEY_TO_NAME = {
     "5HEo565WAy4Dbq3Sv271SAi7syBSofyfhhwRNjFNSM2gP9M2": "YUMA",
     "5FFApaS75bv5pJHfAp2FVLBj9ZaXuFDjEypsaBNc1wCfe52v": "RoundTable21",
     "5F2CsUDVbRbVMXTh9fAzF9GacjVX7UapvRxidrxe7z8BYckQ": "Rizzo", 
-    "5HYk8DMKWK8TJyPzZJ9vmZk7B5NPCgjnZoyZ1ZsB54RXdN47": "Cruicible Labs",
+    "5CsvRJXuR955WojnGMdok1hbhffZyB4N5ocrv82f3p5A2zVp": "Tao5",
+    "5CVS9d1NcQyWKUyadLevwGxg6LgBcF9Lik6NSnbe5q59jwhE": "Ary van der Touw",
+    "5G1NjW9YhXLadMWajvTkfcJy6up3yH2q1YzMXDTi6ijanChe": "5G1NjW9YhXLadMWajvTkfcJy6up3yH2q1YzMXDTi6ijanChe",
+    "5HbScNssaEfioJHXjcXdpyqo1AKnYjymidGF8opcF9rTFZdT": "5HbScNssaEfioJHXjcXdpyqo1AKnYjymidGF8opcF9rTFZdT",
+    "5HRAxm1SiT6QNEBDFpCPGeJMRRDL92Z6qg9Hswj1wT8spMo7": "5HRAxm1SiT6QNEBDFpCPGeJMRRDL92Z6qg9Hswj1wT8spMo7",
 }
 TIERS = ["research", "inference_0", "inference_1"]
 TIER_COLORS = ["#636EFA", "#EF553B", "#00CC96"]
