@@ -299,25 +299,38 @@ def main():
             "Last Minutes", min_value=1, max_value=60 * 6, value=60
         )
 
-        @st.cache_resource(ttl=60 * 10)
-        def get_pyg_batch_data(last_minutes):
-            batch_reports = requests.get(
-                f"{API_BASE_URL}/get-batch-reports/{last_minutes}"
-            ).json()["batch_reports"]
+    @st.cache_resource(ttl=60 * 10)
+    def get_pyg_batch_data(last_minutes,metadata):
+        # Fetch batch reports from the API
+        batch_reports = requests.get(
+            f"{API_BASE_URL}/get-batch-reports/{last_minutes}"
+        ).json()["batch_reports"]
 
-            data = transform_batch_data(batch_reports)
-            data["timestamp"] = pd.to_datetime(data["timestamp"]).dt.strftime(
-                "%Y-%m-%d %H:%M:%S"
-            )
-            from pygwalker.api.streamlit import StreamlitRenderer
+        # Transform batch reports into a DataFrame
+        data = transform_batch_data(batch_reports)
 
-            pyg_app = StreamlitRenderer(data)
+        # Mmap UID to Tier
+        uid_to_tier = {}
+        for uid, meta_data in metadata.items():
+            tier = meta_data["tier"]
+            uid_to_tier[str(uid)] = tier
 
-            return pyg_app
+        # Map tier for each UID in the batch report
+        data["tier"] = (data["uid"].astype(str)).map(uid_to_tier).fillna("Unknown")
 
-        pyg_app = get_pyg_batch_data(last_minutes)
-        pyg_app.explorer()
+        # Format the timestamp for better readability
+        data["timestamp"] = pd.to_datetime(data["timestamp"]).dt.strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
 
+        # Integrate pygwalker for data exploration
+        from pygwalker.api.streamlit import StreamlitRenderer
+        pyg_app = StreamlitRenderer(data)
+
+        return pyg_app
+
+    pyg_app = get_pyg_batch_data(last_minutes,metadata)
+    pyg_app.explorer()
 
 if __name__ == "__main__":
     main()
