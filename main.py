@@ -23,8 +23,8 @@ HOTKEY_TO_NAME = {
     "5HbScNssaEfioJHXjcXdpyqo1AKnYjymidGF8opcF9rTFZdT": "5HbScNssaEfioJHXjcXdpyqo1AKnYjymidGF8opcF9rTFZdT",
     "5HRAxm1SiT6QNEBDFpCPGeJMRRDL92Z6qg9Hswj1wT8spMo7": "5HRAxm1SiT6QNEBDFpCPGeJMRRDL92Z6qg9Hswj1wT8spMo7",
 }
-TIERS = ["research", "inference_0", "inference_1"]
-TIER_COLORS = ["#636EFA", "#EF553B", "#00CC96"]
+TIERS = ["research","universal", "inference_0", "inference_1"]
+TIER_COLORS = ["#636EFA", "#EF553B", "#00CC96","#AB63FA"]
 
 
 def setup_page():
