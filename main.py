@@ -86,7 +86,8 @@ def display_validator_info(selected_name):
 
         | **Tier** | **Purpose** | **Context Size** | **Incentive Percentage** | **Supporting Models** |
         |-----------|-------------|------------------|-------------------------|---------------------|
-        | `research` | Warmup tier for new LLM model releases | Up to 10000 characters | `100%` | `mistralai/Mistral-7B-Instruct-v0.2` |
+        | `research` | Warmup tier for new LLM model releases | Up to 15000 characters | `60%` | `mistralai/Mistral-7B-Instruct-v0.2` |
+        | `universal` | Compress text representation for various models | Up to 15000 characters | `40%` | `meta-llama/Llama-3.1-8B-Instruct` |
         | `inference_0` | Optimized for **long context** in popular LLMs | Up to 15000 characters | `0%` | `mistralai/Mistral-7B-Instruct-v0.2` |
         | `inference_1` | Optimized for **very long context** in popular LLMs | Up to 20000 characters | `0%` | `mistralai/Mistral-7B-Instruct-v0.2` |
         </div>
