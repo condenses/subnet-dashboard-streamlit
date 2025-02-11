@@ -319,6 +319,10 @@ def main():
             # Map tier for each UID in the batch report
             data["tier"] = (data["uid"].astype(str)).map(uid_to_tier).fillna("Unknown")
 
+            # Map UID to Coldkey
+            uid_to_coldkey = {str(uid): coldkey for uid, coldkey in coldkey_uid_map.items()}
+            data["coldkey"] = data["uid"].astype(str).map(uid_to_coldkey).fillna("Unknown")
+
             # Format the timestamp for better readability
             data["timestamp"] = pd.to_datetime(data["timestamp"]).dt.strftime(
                 "%Y-%m-%d %H:%M:%S"
