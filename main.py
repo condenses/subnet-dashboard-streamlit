@@ -17,11 +17,6 @@ HOTKEY_TO_NAME = {
     "5HEo565WAy4Dbq3Sv271SAi7syBSofyfhhwRNjFNSM2gP9M2": "YUMA",
     "5FFApaS75bv5pJHfAp2FVLBj9ZaXuFDjEypsaBNc1wCfe52v": "RoundTable21",
     "5F2CsUDVbRbVMXTh9fAzF9GacjVX7UapvRxidrxe7z8BYckQ": "Rizzo", 
-    "5CsvRJXuR955WojnGMdok1hbhffZyB4N5ocrv82f3p5A2zVp": "Tao5",
-    "5CVS9d1NcQyWKUyadLevwGxg6LgBcF9Lik6NSnbe5q59jwhE": "Ary van der Touw",
-    "5G1NjW9YhXLadMWajvTkfcJy6up3yH2q1YzMXDTi6ijanChe": "5G1NjW9YhXLadMWajvTkfcJy6up3yH2q1YzMXDTi6ijanChe",
-    "5HbScNssaEfioJHXjcXdpyqo1AKnYjymidGF8opcF9rTFZdT": "5HbScNssaEfioJHXjcXdpyqo1AKnYjymidGF8opcF9rTFZdT",
-    "5HRAxm1SiT6QNEBDFpCPGeJMRRDL92Z6qg9Hswj1wT8spMo7": "5HRAxm1SiT6QNEBDFpCPGeJMRRDL92Z6qg9Hswj1wT8spMo7",
 }
 TIERS = ["research","universal", "inference_0", "inference_1"]
 TIER_COLORS = ["#636EFA", "#EF553B", "#00CC96","#AB63FA"]
@@ -71,11 +66,10 @@ def get_tier_distribution(metadata):
     return tier_distribution, scores
 
 
-def display_validator_info(selected_name):
+def display_project_info():
     st.markdown(
         f"""
         <div align="center">
-        **Viewing report from {selected_name}**
         
         | Component | Link |
         |-----------|------|
@@ -189,23 +183,129 @@ def transform_batch_data(batch_reports):
             print(f"Error processing batch report: {e}")
     return pd.DataFrame(records)
 
+def format_time_diff(timestamp):
+    if pd.isna(timestamp):
+        return None
+    
+    now = pd.Timestamp.now()
+    diff = now - pd.Timestamp(timestamp)
+    
+    # Convert timedelta to human readable format
+    minutes = int(diff.total_seconds() / 60)
+    hours = int(minutes / 60)
+    days = int(hours / 24)
+    
+    if days > 0:
+        elapsed = f"{days} days ago"
+    elif hours > 0:
+        elapsed = f"{hours} hours ago"
+    else:
+        elapsed = f"{minutes} minutes ago"
+        
+    return f"{timestamp} ({elapsed})"
+
+@st.cache_resource(ttl=60 * 10)
+def get_lastest_time(val_name, metadata, last_minutes):
+    batch_reports = requests.get(
+                f"{API_BASE_URL}/get-batch-reports/{last_minutes}"
+            ).json()["batch_reports"]
+
+            # Transform batch reports into a DataFrame
+    data = transform_batch_data(batch_reports)
+    # Mmap UID to Tier
+    uid_to_tier = {}
+    for uid, meta_data in metadata.items():
+        tier = meta_data["tier"]
+        uid_to_tier[str(uid)] = tier
+
+    # Map tier for each UID in the batch report
+    data["tier"] = (data["uid"].astype(str)).map(uid_to_tier).fillna("Unknown")
+    data = data[data["tier"].isin(TIERS)]
+    data = data[data["validator_name"] == val_name]
+
+    # Format the timestamp for better readability
+    data["timestamp"] = pd.to_datetime(data["timestamp"]).dt.strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
+
+    # Assuming your dataframe is called 'df' with columns: timestamp, validator_name, tier
+
+    data = (data.groupby(['validator_name', 'tier'])['timestamp']
+                .max()
+                .unstack(fill_value=None)
+                .rename(columns={
+                    'universal': 'universal_last_timestamp',
+                    'research': 'research_last_timestamp'
+                })
+                .reset_index())
+    
+    data['universal_last_timestamp'] = data['universal_last_timestamp'].apply(format_time_diff)
+    data['research_last_timestamp'] = data['research_last_timestamp'].apply(format_time_diff)
+
+    # If any validator is missing either tier, the columns will contain NaN values
+    return data
+
+def get_metadata_df(metadata, selected_tier, coldkey_uid_map):
+    metadata_df = pd.DataFrame(metadata).transpose()
+    metadata_df = metadata_df[metadata_df["tier"] == selected_tier]
+    metadata_df.reset_index(level=0, inplace=True)
+    metadata_df.rename(columns={"index": "UID"}, inplace=True)
+    coldkey_map_df = pd.DataFrame(
+        list(coldkey_uid_map.items()), columns=["UID", "Coldkey"]
+    )
+    # join 2 df
+    metadata_df = metadata_df.merge(coldkey_map_df, on="UID", how="left")
+    return metadata_df
+
+def extract_data(reports, hotkeys, hotkey_to_name, last_minutes):
+    df = None
+    for hotkey in hotkeys:
+        report = next(r for r in reports if r["hotkey"] == hotkey)
+        metadata = report["metadata"]
+        data = get_lastest_time(hotkey_to_name[hotkey], metadata, last_minutes)
+        tier_distribution, scores = get_tier_distribution(metadata)
+        research_percent = int(tier_distribution.get("research", 0) / sum(tier_distribution.values()) * 100)
+        universal_percent = 100 - research_percent
+        data["research"] = f"{tier_distribution['research']} ({research_percent}%)"
+        data["universal"] = f"{tier_distribution['universal']} ({universal_percent}%)"
+        
+        list_scores = scores.values()
+        zero_scores = len([score for score in list_scores if score < 5])
+        zero_scores_percent = int(zero_scores / len(list_scores) * 100)
+        data["~0 score_%"] = zero_scores_percent
+
+        if df is None:
+            df = data
+        else:
+            df = pd.concat([df, data], axis=0)
+    return df
 
 def main():
     setup_page()
 
     reports = fetch_latest_reports()
     st.session_state.stats = reports
-    coldkey_uid_map = fetch_coldkey_uid_map()
     name_to_hotkey = {v: k for k, v in HOTKEY_TO_NAME.items()}
+    last_minutes = st.slider(
+            "Last Minutes", min_value=1, max_value=60 * 6, value=120
+    )
+    st.header("Information Summary")
+    display_project_info()
+    coldkey_uid_map = fetch_coldkey_uid_map()
+    hotkey_to_name = {k: v for k, v in HOTKEY_TO_NAME.items()}
 
-    col1, col2 = st.columns([2, 1])
+    hotkeys = list(HOTKEY_TO_NAME.keys())
+    df  = extract_data(reports, hotkeys, hotkey_to_name, last_minutes)
+    
+    st.subheader("Validators Information")
+    st.write("If the last time steps received is >= 2hours, the validator backend is down")
+    st.dataframe(df, use_container_width=True)
 
-    with col1:
-        selected_name = st.selectbox(
-            "Select a validator", list(HOTKEY_TO_NAME.values()), index=0
-        )
-        hotkey = name_to_hotkey[selected_name]
-        st.toast(f"Selected {selected_name}", icon="🔍")
+    selected_name = st.selectbox(
+        "Select a validator", list(HOTKEY_TO_NAME.values()), index=0
+    )
+    hotkey = name_to_hotkey[selected_name]
+    st.toast(f"Selected {selected_name}", icon="🔍")
 
     try:
         report = next(r for r in reports if r["hotkey"] == hotkey)
@@ -217,19 +317,6 @@ def main():
         update_timestamp: float = report["timestamp"]
         update_timestamp = datetime.fromtimestamp(update_timestamp)
         tier_distribution, scores = get_tier_distribution(metadata)
-
-        with col1:
-            updated_minutes_ago = (
-                datetime.now() - update_timestamp
-            ).total_seconds() / 60
-            st.markdown(
-                f"**Last updated {updated_minutes_ago:.0f} minutes ago**",
-                unsafe_allow_html=True,
-            )
-            display_validator_info(selected_name)
-
-        with col2:
-            st.plotly_chart(plot_tier_distribution(tier_distribution))
 
         selected_tier = st.selectbox("Select a Tier", TIERS)
         color = (
@@ -295,10 +382,6 @@ def main():
                         st.write("No details available for the selected UIDs.")
                 else:
                     st.write("No scores found for the selected tier.")
-
-        last_minutes = st.slider(
-            "Last Minutes", min_value=1, max_value=60 * 6, value=60
-        )
 
         @st.cache_resource(ttl=60 * 10)
         def get_pyg_batch_data(last_minutes,metadata):
