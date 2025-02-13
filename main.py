@@ -205,13 +205,19 @@ def format_time_diff(timestamp):
     return f"{timestamp} ({elapsed})"
 
 @st.cache_resource(ttl=60 * 10)
-def get_lastest_time(val_name, metadata, last_minutes):
+def fetch_batch_data(last_minutes):
+    # Fetch batch reports from the API
     batch_reports = requests.get(
-                f"{API_BASE_URL}/get-batch-reports/{last_minutes}"
-            ).json()["batch_reports"]
+        f"{API_BASE_URL}/get-batch-reports/{last_minutes}"
+    ).json()["batch_reports"]
 
-            # Transform batch reports into a DataFrame
+    # Transform batch reports into a DataFrame
     data = transform_batch_data(batch_reports)
+    return data
+
+@st.cache_resource(ttl=60 * 10)
+def get_lastest_time(val_name, metadata, last_minutes):
+    data = fetch_batch_data(last_minutes)
     # Mmap UID to Tier
     uid_to_tier = {}
     for uid, meta_data in metadata.items():
@@ -257,7 +263,7 @@ def get_metadata_df(metadata, selected_tier, coldkey_uid_map):
     metadata_df = metadata_df.merge(coldkey_map_df, on="UID", how="left")
     return metadata_df
 
-def extract_data(reports, hotkeys, hotkey_to_name, last_minutes):
+def extract_data(reports, hotkeys, hotkey_to_name, last_minutes, batch_data):
     df = None
     for hotkey in hotkeys:
         report = next(r for r in reports if r["hotkey"] == hotkey)
@@ -269,10 +275,12 @@ def extract_data(reports, hotkeys, hotkey_to_name, last_minutes):
         data["research"] = f"{tier_distribution['research']} ({research_percent}%)"
         data["universal"] = f"{tier_distribution['universal']} ({universal_percent}%)"
         
-        list_scores = scores.values()
-        zero_scores = len([score for score in list_scores if score < 5])
-        zero_scores_percent = int(zero_scores / len(list_scores) * 100)
-        data["~0 score_%"] = zero_scores_percent
+        # get 0 % of accuracy
+        agg_data = (batch_data.groupby('validator_name')
+              .agg({'accuracy': lambda x: (x == 0.0).mean() * 100})  # Calculate percentage of scores < 5
+              .rename(columns={'accuracy': '0 accuracy_%'})
+              .reset_index())  # Reset index to make validator_name a column again
+        data = data.merge(agg_data, on='validator_name', how='left')
 
         if df is None:
             df = data
@@ -289,13 +297,15 @@ def main():
     last_minutes = st.slider(
             "Last Minutes", min_value=1, max_value=60 * 6, value=120
     )
+    batch_data = fetch_batch_data(last_minutes)
+
     st.header("Information Summary")
     display_project_info()
     coldkey_uid_map = fetch_coldkey_uid_map()
     hotkey_to_name = {k: v for k, v in HOTKEY_TO_NAME.items()}
 
     hotkeys = list(HOTKEY_TO_NAME.keys())
-    df  = extract_data(reports, hotkeys, hotkey_to_name, last_minutes)
+    df  = extract_data(reports, hotkeys, hotkey_to_name, last_minutes, batch_data)
     
     st.subheader("Validators Information")
     st.write("If the last time steps received is >= 2hours, the validator backend is down")
@@ -384,15 +394,7 @@ def main():
                     st.write("No scores found for the selected tier.")
 
         @st.cache_resource(ttl=60 * 10)
-        def get_pyg_batch_data(last_minutes,metadata):
-            # Fetch batch reports from the API
-            batch_reports = requests.get(
-                f"{API_BASE_URL}/get-batch-reports/{last_minutes}"
-            ).json()["batch_reports"]
-
-            # Transform batch reports into a DataFrame
-            data = transform_batch_data(batch_reports)
-
+        def get_pyg_batch_data(data, metadata):
             # Mmap UID to Tier
             uid_to_tier = {}
             for uid, meta_data in metadata.items():
@@ -417,7 +419,7 @@ def main():
 
             return pyg_app
 
-        pyg_app = get_pyg_batch_data(last_minutes,metadata)
+        pyg_app = get_pyg_batch_data(batch_data, metadata)
         pyg_app.explorer()
 
 if __name__ == "__main__":
