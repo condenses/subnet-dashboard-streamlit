@@ -245,8 +245,8 @@ def get_lastest_time(val_name, metadata, last_minutes):
                 })
                 .reset_index())
     
-    data['universal_last_timestamp'] = data['universal_last_timestamp'].apply(format_time_diff)
-    data['research_last_timestamp'] = data['research_last_timestamp'].apply(format_time_diff)
+    data['universal_last_timestamp'] = data['universal_last_timestamp'].apply(format_time_diff) if 'universal_last_timestamp' in data.columns else None
+    data['research_last_timestamp'] = data['research_last_timestamp'].apply(format_time_diff) if 'research_last_timestamp' in data.columns else None
 
     # If any validator is missing either tier, the columns will contain NaN values
     return data
