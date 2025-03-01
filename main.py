@@ -270,10 +270,9 @@ def extract_data(reports, hotkeys, hotkey_to_name, last_minutes, batch_data):
         metadata = report["metadata"]
         data = get_lastest_time(hotkey_to_name[hotkey], metadata, last_minutes)
         tier_distribution, scores = get_tier_distribution(metadata)
-        research_percent = int(tier_distribution.get("research", 0) / sum(tier_distribution.values()) * 100)
         universal_percent = 100 - research_percent
         data["research"] = f"{tier_distribution['research']} ({research_percent}%)"
-        data["universal"] = f"{tier_distribution['universal']} ({universal_percent}%)"
+
         
         # get 0 % of accuracy
         agg_data = (batch_data.groupby('validator_name')
