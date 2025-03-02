@@ -18,7 +18,7 @@ HOTKEY_TO_NAME = {
     "5FFApaS75bv5pJHfAp2FVLBj9ZaXuFDjEypsaBNc1wCfe52v": "RoundTable21",
     "5F2CsUDVbRbVMXTh9fAzF9GacjVX7UapvRxidrxe7z8BYckQ": "Rizzo", 
 }
-TIERS = ["research","universal", "inference_0", "inference_1"]
+TIERS = ["universal"]
 TIER_COLORS = ["#636EFA", "#EF553B", "#00CC96","#AB63FA"]
 
 
@@ -241,13 +241,10 @@ def get_lastest_time(val_name, metadata, last_minutes):
                 .unstack(fill_value=None)
                 .rename(columns={
                     'universal': 'universal_last_timestamp',
-                    'research': 'research_last_timestamp'
                 })
                 .reset_index())
     
     data['universal_last_timestamp'] = data['universal_last_timestamp'].apply(format_time_diff) if 'universal_last_timestamp' in data.columns else None
-    data['research_last_timestamp'] = data['research_last_timestamp'].apply(format_time_diff) if 'research_last_timestamp' in data.columns else None
-
     # If any validator is missing either tier, the columns will contain NaN values
     return data
 
@@ -270,9 +267,6 @@ def extract_data(reports, hotkeys, hotkey_to_name, last_minutes, batch_data):
         metadata = report["metadata"]
         data = get_lastest_time(hotkey_to_name[hotkey], metadata, last_minutes)
         tier_distribution, scores = get_tier_distribution(metadata)
-        universal_percent = 100 - research_percent
-        data["research"] = f"{tier_distribution['research']} ({research_percent}%)"
-
         
         # get 0 % of accuracy
         agg_data = (batch_data.groupby('validator_name')
